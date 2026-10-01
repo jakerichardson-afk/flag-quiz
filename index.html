@@ -1,860 +1,464 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Flag Quiz</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Flag Quiz · Globe Trotter</title>
+<meta name="description" content="Name the flag, then watch the globe spin to find the country. Easy, Medium, and Hard levels with 138 countries.">
+<meta name="theme-color" content="#0b1033">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700;800&family=Inter:wght@500;600;700;800&display=swap" rel="stylesheet">
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
-
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
   :root {
-    --bg: #0d0f1a;
-    --surface: #161929;
-    --surface2: #1e2338;
-    --border: #2a3050;
-    --accent: #4f8ef7;
-    --accent2: #a78bfa;
-    --correct: #34d399;
-    --wrong: #f87171;
-    --text: #e8eaf6;
-    --text-dim: #8892b0;
-    --gold: #fbbf24;
+    --space: #060818; --navy: #0b1033; --glass: rgba(255,255,255,.08); --glass-line: rgba(255,255,255,.16);
+    --text: #f2f4ff; --dim: #b7c1e8; --gold: #ffcf3f; --good: #22c55e; --bad: #f87171; --sea: #3a7bd5;
   }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body { margin: 0; color: var(--text); font: 16px/1.45 Inter, system-ui, sans-serif; overflow: hidden;
+    background: radial-gradient(120% 120% at 72% 42%, #1b2a6b 0%, var(--navy) 52%, var(--space) 100%); }
+  body::before { content: ""; position: fixed; inset: 0; pointer-events: none; opacity: .55;
+    background: radial-gradient(1.2px 1.2px at 20px 30px, #fff 50%, transparent 51%) 0 0 / 90px 70px,
+                radial-gradient(1px 1px at 60px 10px, #ffffffaa 50%, transparent 51%) 0 0 / 130px 110px; }
+  button { font: inherit; color: inherit; cursor: pointer; }
+  button:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
 
-  body {
-    font-family: 'Space Grotesk', sans-serif;
-    background: var(--bg);
-    color: var(--text);
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 20px;
-  }
-
-  /* Subtle star field */
-  body::before {
-    content: '';
-    position: fixed;
-    inset: 0;
-    background-image:
-      radial-gradient(1px 1px at 10% 20%, rgba(255,255,255,0.15) 0%, transparent 100%),
-      radial-gradient(1px 1px at 30% 60%, rgba(255,255,255,0.1) 0%, transparent 100%),
-      radial-gradient(1px 1px at 70% 15%, rgba(255,255,255,0.12) 0%, transparent 100%),
-      radial-gradient(1px 1px at 85% 45%, rgba(255,255,255,0.08) 0%, transparent 100%),
-      radial-gradient(1px 1px at 50% 80%, rgba(255,255,255,0.1) 0%, transparent 100%),
-      radial-gradient(1px 1px at 20% 90%, rgba(255,255,255,0.07) 0%, transparent 100%),
-      radial-gradient(1px 1px at 90% 75%, rgba(255,255,255,0.09) 0%, transparent 100%);
-    pointer-events: none;
-    z-index: 0;
-  }
-
-  #app {
-    position: relative;
-    z-index: 1;
-    width: 100%;
-    max-width: 600px;
-  }
-
-  /* ── SCREENS ── */
+  /* Layout: controls on the left, globe on the right. Phones in portrait stack them. */
+  #globe-wrap { position: fixed; right: -6vw; top: 50%; transform: translateY(-50%); width: min(64vw, 110vh); aspect-ratio: 1; touch-action: none; }
+  #globe { width: 100%; height: 100%; display: block; cursor: grab; }
+  #globe:active { cursor: grabbing; }
+  .panel { position: relative; z-index: 2; width: min(46vw, 640px); height: 100%; padding: max(4vh, 20px) 0 max(4vh, 20px) max(5vw, 20px); display: flex; flex-direction: column; justify-content: center; }
   .screen { display: none; }
-  .screen.active { display: block; }
+  .screen.on { display: block; animation: rise .35s ease; }
+  @keyframes rise { from { opacity: 0; transform: translateY(10px); } }
 
-  /* ── HEADER ── */
-  .logo {
-    text-align: center;
-    margin-bottom: 36px;
-  }
-  .logo-icon { font-size: 3rem; display: block; margin-bottom: 8px; }
-  .logo h1 {
-    font-family: 'Space Mono', monospace;
-    font-size: 2rem;
-    font-weight: 700;
-    letter-spacing: -1px;
-    background: linear-gradient(135deg, var(--accent), var(--accent2));
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-  }
-  .logo p {
-    color: var(--text-dim);
-    font-size: 0.85rem;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    margin-top: 4px;
-  }
+  .glass { background: var(--glass); border: 1px solid var(--glass-line); border-radius: 16px; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+  h1 { margin: 0; font: 800 clamp(40px, 6vw, 76px)/.95 'Bricolage Grotesque', sans-serif; letter-spacing: -.02em; }
+  h1 span { color: var(--gold); }
+  .sub { margin: 10px 0 24px; color: var(--dim); font-size: clamp(15px, 1.5vw, 19px); }
 
-  /* ── DIFFICULTY CARDS ── */
-  .diff-grid {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-  }
+  /* Menu */
+  .levels { display: grid; gap: 10px; }
+  .level { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 4px 12px; text-align: left; padding: 14px 18px; transition: transform .15s, background .15s; }
+  .level:hover { transform: translateX(4px); background: rgba(255,255,255,.13); }
+  .level b { font: 800 20px 'Bricolage Grotesque', sans-serif; }
+  .level small { grid-column: 1; color: var(--dim); font-size: 14px; }
+  .level .best { grid-row: 1 / span 2; grid-column: 2; text-align: right; font: 700 12px Inter, sans-serif; letter-spacing: .08em; text-transform: uppercase; color: var(--dim); }
+  .level .best em { display: block; font: 800 22px 'Bricolage Grotesque', sans-serif; letter-spacing: 0; color: var(--gold); font-style: normal; }
+  .found { margin-top: 18px; padding: 14px 18px; }
+  .found .row { display: flex; justify-content: space-between; font-weight: 700; }
+  .found .row span { color: var(--gold); }
+  .bar { height: 8px; border-radius: 99px; background: rgba(255,255,255,.12); margin-top: 8px; overflow: hidden; }
+  .bar i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #ffcf3f, #ff9a4a); border-radius: 99px; transition: width .6s ease; }
+  .found p { margin: 8px 0 0; color: var(--dim); font-size: 13.5px; }
 
-  .diff-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    padding: 20px 24px;
-    cursor: pointer;
-    transition: all 0.18s ease;
-    display: flex;
-    align-items: center;
-    gap: 18px;
-    text-align: left;
-  }
-  .diff-card:hover {
-    border-color: var(--accent);
-    background: var(--surface2);
-    transform: translateY(-2px);
-    box-shadow: 0 8px 32px rgba(79,142,247,0.12);
-  }
-  .diff-icon { font-size: 2rem; flex-shrink: 0; }
-  .diff-name {
-    font-size: 1.1rem;
-    font-weight: 700;
-    margin-bottom: 2px;
-  }
-  .diff-desc { font-size: 0.8rem; color: var(--text-dim); line-height: 1.5; }
-  .diff-badge {
-    margin-left: auto;
-    font-family: 'Space Mono', monospace;
-    font-size: 0.7rem;
-    padding: 4px 10px;
-    border-radius: 20px;
-    font-weight: 700;
-    flex-shrink: 0;
-  }
-  .badge-easy { background: rgba(52,211,153,0.15); color: var(--correct); border: 1px solid rgba(52,211,153,0.3); }
-  .badge-medium { background: rgba(251,191,36,0.15); color: var(--gold); border: 1px solid rgba(251,191,36,0.3); }
-  .badge-hard { background: rgba(248,113,113,0.15); color: var(--wrong); border: 1px solid rgba(248,113,113,0.3); }
+  /* Game */
+  .hud { display: flex; gap: 8px; flex-wrap: wrap; }
+  .hud b { font: 700 12.5px Inter, sans-serif; letter-spacing: .08em; text-transform: uppercase; padding: 7px 12px; border-radius: 99px; }
+  .hud em { font-style: normal; color: var(--gold); margin-left: 4px; }
+  .hud .quit { margin-left: auto; background: none; border: 1px solid var(--glass-line); color: var(--dim); }
+  .prog { height: 4px; border-radius: 99px; background: rgba(255,255,255,.12); margin: 14px 0 0; overflow: hidden; }
+  .prog i { display: block; height: 100%; width: 0; background: var(--gold); transition: width .4s ease; }
+  .q { margin: 16px 0 12px; font: 700 clamp(17px, 1.8vw, 24px) 'Bricolage Grotesque', sans-serif; color: #c8d3ff; }
+  .flag-stage { display: flex; justify-content: center; }
+  .wave { position: relative; width: min(100%, 360px, 42vh); aspect-ratio: 4 / 3; display: flex; filter: drop-shadow(0 16px 20px rgba(0,0,0,.4)); }
+  .wave i { flex: 1; margin-right: -0.5px; background-repeat: no-repeat; animation: ripple 2.4s ease-in-out infinite; }
+  @keyframes ripple { 0%, 100% { transform: translateY(-3%); } 50% { transform: translateY(3%); } }
+  .wave.pop { animation: pop .45s cubic-bezier(.2,1.5,.4,1); }
+  @keyframes pop { from { transform: scale(.7) rotate(-4deg); opacity: 0; } }
+  .choices { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 20px; }
+  .choice { position: relative; text-align: left; font-weight: 700; font-size: clamp(14px, 1.4vw, 18px); padding: 13px 14px 13px 42px; min-height: 52px; transition: background .15s, transform .15s; }
+  .choice::before { content: attr(data-key); position: absolute; left: 12px; top: 50%; transform: translateY(-50%); width: 20px; height: 20px; border-radius: 6px; display: grid; place-items: center; font-size: 12px; color: var(--dim); border: 1px solid var(--glass-line); }
+  .choice:hover:not(:disabled) { background: rgba(255,255,255,.14); transform: translateY(-1px); }
+  .choice:disabled { cursor: default; }
+  .choice.right { background: var(--good); border-color: var(--good); box-shadow: 0 0 0 4px rgba(34,197,94,.3); color: #04230f; }
+  .choice.right::before { color: #04230f; border-color: rgba(0,0,0,.25); }
+  .choice.wrong { background: rgba(248,113,113,.85); border-color: var(--bad); animation: shake .4s; }
+  .choice.dim { opacity: .45; }
+  @keyframes shake { 20%, 60% { transform: translateX(-6px); } 40%, 80% { transform: translateX(6px); } }
+  .after { display: flex; align-items: center; gap: 12px; margin-top: 16px; min-height: 48px; }
+  .fb { flex: 1; font-weight: 700; }
+  .fb.good { color: #7cf0a6; }
+  .fb.bad { color: #ffb4b4; }
+  .btn { font: 800 16px Inter, sans-serif; padding: 13px 20px; border-radius: 14px; border: 0; background: var(--gold); color: #1b1300; box-shadow: 0 6px 0 #c99a12; transition: transform .1s; }
+  .btn:active { transform: translateY(3px); box-shadow: 0 3px 0 #c99a12; }
+  .btn.ghost { background: transparent; color: var(--text); box-shadow: none; border: 1px solid var(--glass-line); }
+  #next { visibility: hidden; }
+  #next.show { visibility: visible; animation: rise .25s ease; }
 
-  /* ── HUD ── */
-  .hud {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 24px;
-    padding: 10px 16px;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-  }
-  .hud-item { display: flex; flex-direction: column; align-items: center; gap: 2px; }
-  .hud-label { font-size: 0.65rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.1em; }
-  .hud-value { font-family: 'Space Mono', monospace; font-size: 1.1rem; font-weight: 700; }
-  .hud-divider { width: 1px; height: 32px; background: var(--border); }
-  #score-display { color: var(--accent); }
-  #streak-display { color: var(--gold); }
-  #question-display { color: var(--text-dim); }
+  /* Country tag shown on the globe after an answer */
+  #tag { position: fixed; z-index: 3; pointer-events: none; background: #fff; color: #0b1033; padding: 10px 14px; border-radius: 12px; box-shadow: 0 12px 30px rgba(0,0,0,.45); opacity: 0; transform: translate(-50%, -100%) translateY(-18px) scale(.9); transition: opacity .25s, transform .25s; white-space: nowrap; }
+  #tag.show { opacity: 1; transform: translate(-50%, -100%) translateY(-24px) scale(1); }
+  #tag b { display: block; font: 800 18px 'Bricolage Grotesque', sans-serif; }
+  #tag small { font: 600 13px Inter, sans-serif; color: #5d6178; }
+  #tag::after { content: ""; position: absolute; left: 50%; bottom: -7px; width: 14px; height: 14px; background: #fff; transform: translateX(-50%) rotate(45deg); }
 
-  /* Progress bar */
-  .progress-bar {
-    height: 3px;
-    background: var(--surface2);
-    border-radius: 2px;
-    margin-bottom: 24px;
-    overflow: hidden;
-  }
-  .progress-fill {
-    height: 100%;
-    background: linear-gradient(90deg, var(--accent), var(--accent2));
-    border-radius: 2px;
-    transition: width 0.4s ease;
-  }
+  /* Results */
+  .big { font: 800 clamp(56px, 8vw, 96px)/1 'Bricolage Grotesque', sans-serif; color: var(--gold); margin: 6px 0 4px; }
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 18px 0; }
+  .stats div { padding: 12px; text-align: center; }
+  .stats b { display: block; font: 800 24px 'Bricolage Grotesque', sans-serif; }
+  .stats small { color: var(--dim); font-size: 12.5px; text-transform: uppercase; letter-spacing: .08em; }
+  .legend { display: flex; gap: 14px; color: var(--dim); font-size: 14px; margin-bottom: 18px; flex-wrap: wrap; }
+  .legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }
+  .newbest { display: inline-block; margin-left: 8px; font: 800 13px Inter, sans-serif; background: var(--gold); color: #1b1300; padding: 3px 10px; border-radius: 99px; vertical-align: middle; }
+  .actions { display: flex; gap: 10px; flex-wrap: wrap; }
+  .loading { position: fixed; right: 20vw; top: 50%; color: var(--dim); }
 
-  /* ── FLAG CARD ── */
-  .flag-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 20px;
-    padding: 40px 24px;
-    text-align: center;
-    margin-bottom: 20px;
-    transition: border-color 0.3s;
+  /* Phones and narrow windows: globe on top, controls below. */
+  @media (max-aspect-ratio: 1/1), (max-width: 760px) {
+    body { overflow-y: auto; }
+    #globe-wrap { position: fixed; left: 50%; right: auto; top: max(-14vw, -60px); transform: translateX(-50%); width: min(118vw, 70vh); }
+    .panel { width: 100%; height: auto; min-height: 100%; padding: 0 16px 24px; justify-content: flex-end; padding-top: min(60vw, 40vh); }
+    .glass.panel-bg { background: rgba(11,16,51,.72); }
+    .screen.on { background: linear-gradient(180deg, transparent, rgba(6,8,24,.85) 12%); border-radius: 20px; padding: 14px 0 0; }
+    .wave { width: min(70vw, 300px); }
+    .loading { right: auto; left: 50%; top: 20vh; transform: translateX(-50%); }
   }
-  .flag-card.correct { border-color: var(--correct); box-shadow: 0 0 32px rgba(52,211,153,0.15); }
-  .flag-card.wrong { border-color: var(--wrong); box-shadow: 0 0 32px rgba(248,113,113,0.1); }
-
-  .flag-emoji {
-    font-size: 16rem;
-    line-height: 1;
-    display: block;
-    margin-bottom: 12px;
-    filter: drop-shadow(0 4px 16px rgba(0,0,0,0.4));
-    transition: transform 0.3s;
-  }
-  .flag-emoji.pop { animation: flagPop 0.4s ease; }
-  @keyframes flagPop {
-    0% { transform: scale(1); }
-    40% { transform: scale(1.18); }
-    100% { transform: scale(1); }
-  }
-
-  .flag-question {
-    font-size: 0.8rem;
-    color: var(--text-dim);
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-  }
-
-  /* ── CHOICES ── */
-  .choices {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
-    margin-bottom: 20px;
-  }
-
-  .choice-btn {
-    background: var(--surface);
-    border: 1.5px solid var(--border);
-    border-radius: 12px;
-    padding: 14px 16px;
-    color: var(--text);
-    font-family: 'Space Grotesk', sans-serif;
-    font-size: 0.88rem;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.15s ease;
-    text-align: center;
-    line-height: 1.3;
-  }
-  .choice-btn:hover:not(:disabled) {
-    border-color: var(--accent);
-    background: var(--surface2);
-    transform: translateY(-1px);
-  }
-  .choice-btn:disabled { cursor: default; transform: none; }
-  .choice-btn.correct-ans {
-    background: rgba(52,211,153,0.15);
-    border-color: var(--correct);
-    color: var(--correct);
-    font-weight: 700;
-  }
-  .choice-btn.wrong-ans {
-    background: rgba(248,113,113,0.1);
-    border-color: var(--wrong);
-    color: var(--wrong);
-  }
-  .choice-btn.shake { animation: shake 0.35s ease; }
-  @keyframes shake {
-    0%,100% { transform: translateX(0); }
-    25% { transform: translateX(-6px); }
-    75% { transform: translateX(6px); }
-  }
-
-  /* ── FEEDBACK ── */
-  .feedback {
-    min-height: 40px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    font-size: 0.92rem;
-    font-weight: 600;
-    margin-bottom: 16px;
-    transition: opacity 0.2s;
-  }
-  .feedback.correct-fb { color: var(--correct); }
-  .feedback.wrong-fb { color: var(--wrong); }
-
-  /* ── NEXT BTN ── */
-  .next-btn {
-    width: 100%;
-    background: linear-gradient(135deg, var(--accent), var(--accent2));
-    border: none;
-    border-radius: 12px;
-    padding: 14px;
-    color: #fff;
-    font-family: 'Space Grotesk', sans-serif;
-    font-size: 1rem;
-    font-weight: 700;
-    cursor: pointer;
-    letter-spacing: 0.03em;
-    transition: opacity 0.15s, transform 0.15s;
-    display: none;
-  }
-  .next-btn:hover { opacity: 0.9; transform: translateY(-1px); }
-  .next-btn.visible { display: block; }
-
-  /* ── RESULTS ── */
-  #results-screen {
-    text-align: center;
-  }
-  .result-trophy { font-size: 4rem; margin-bottom: 16px; }
-  .result-title {
-    font-family: 'Space Mono', monospace;
-    font-size: 1.6rem;
-    font-weight: 700;
-    margin-bottom: 8px;
-    background: linear-gradient(135deg, var(--accent), var(--accent2));
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-  }
-  .result-subtitle { color: var(--text-dim); font-size: 0.85rem; margin-bottom: 28px; }
-
-  .result-stats {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 12px;
-    margin-bottom: 28px;
-  }
-  .stat-box {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 16px 12px;
-  }
-  .stat-num {
-    font-family: 'Space Mono', monospace;
-    font-size: 1.8rem;
-    font-weight: 700;
-    color: var(--accent);
-  }
-  .stat-lbl { font-size: 0.7rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.08em; margin-top: 4px; }
-
-  .result-grade {
-    font-size: 3rem;
-    margin-bottom: 4px;
-  }
-  .result-msg { font-size: 0.9rem; color: var(--text-dim); margin-bottom: 28px; }
-
-  .btn-row { display: flex; gap: 10px; }
-  .btn-primary {
-    flex: 1;
-    background: linear-gradient(135deg, var(--accent), var(--accent2));
-    border: none;
-    border-radius: 12px;
-    padding: 14px;
-    color: #fff;
-    font-family: 'Space Grotesk', sans-serif;
-    font-size: 0.95rem;
-    font-weight: 700;
-    cursor: pointer;
-    transition: opacity 0.15s, transform 0.15s;
-  }
-  .btn-primary:hover { opacity: 0.9; transform: translateY(-1px); }
-  .btn-secondary {
-    flex: 1;
-    background: var(--surface);
-    border: 1.5px solid var(--border);
-    border-radius: 12px;
-    padding: 14px;
-    color: var(--text);
-    font-family: 'Space Grotesk', sans-serif;
-    font-size: 0.95rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.15s;
-  }
-  .btn-secondary:hover { border-color: var(--accent); background: var(--surface2); }
-
-  /* streak flash */
-  @keyframes streakFlash {
-    0% { transform: scale(1); }
-    50% { transform: scale(1.3); color: var(--gold); }
-    100% { transform: scale(1); }
-  }
-  .streak-flash { animation: streakFlash 0.4s ease; }
+  @media (prefers-reduced-motion: reduce) { .wave i { animation: none; } }
 </style>
 </head>
 <body>
-<div id="app">
+<div id="globe-wrap" aria-hidden="true"><canvas id="globe"></canvas></div>
+<div class="loading" id="loading">Loading the globe…</div>
+<div id="tag" aria-hidden="true"><b></b><small></small></div>
 
-  <!-- MENU -->
-  <div id="menu-screen" class="screen active">
-    <div class="logo">
-      <span class="logo-icon">🌍</span>
-      <h1>FLAG QUIZ</h1>
-      <p>Test your world knowledge</p>
+<main class="panel">
+  <section class="screen on" id="menu">
+    <h1>Flag <span>Quiz</span></h1>
+    <p class="sub">Name the flag, then watch the globe find the country.</p>
+    <div class="levels">
+      <button class="level glass" data-level="easy"><b>Easy</b><small>30 famous flags from major nations</small><span class="best">Best<em data-best="easy">0</em></span></button>
+      <button class="level glass" data-level="medium"><b>Medium</b><small>60 flags from every continent</small><span class="best">Best<em data-best="medium">0</em></span></button>
+      <button class="level glass" data-level="hard"><b>Hard</b><small>138 flags, look-alikes, and tiny islands</small><span class="best">Best<em data-best="hard">0</em></span></button>
     </div>
-    <div class="diff-grid">
-      <div class="diff-card" onclick="startGame('easy')">
-        <span class="diff-icon">🗺️</span>
-        <div>
-          <div class="diff-name">Easy</div>
-          <div class="diff-desc">Famous flags from major world nations — the ones every traveler recognizes</div>
-        </div>
-        <span class="diff-badge badge-easy">30 COUNTRIES</span>
-      </div>
-      <div class="diff-card" onclick="startGame('medium')">
-        <span class="diff-icon">🧭</span>
-        <div>
-          <div class="diff-name">Medium</div>
-          <div class="diff-desc">All continents represented — you'll need solid geography chops</div>
-        </div>
-        <span class="diff-badge badge-medium">60 COUNTRIES</span>
-      </div>
-      <div class="diff-card" onclick="startGame('hard')">
-        <span class="diff-icon">🔭</span>
-        <div>
-          <div class="diff-name">Hard</div>
-          <div class="diff-desc">Obscure nations, tricky look-alikes, and flags that test even experts</div>
-        </div>
-        <span class="diff-badge badge-hard">100+ COUNTRIES</span>
-      </div>
+    <div class="found glass">
+      <div class="row">Countries found <span id="found-count">0 / 138</span></div>
+      <div class="bar"><i id="found-bar"></i></div>
+      <p>Every flag you name gets colored in on your globe. Drag the globe to spin it.</p>
     </div>
-  </div>
+  </section>
 
-  <!-- GAME -->
-  <div id="game-screen" class="screen">
-    <div class="hud">
-      <div class="hud-item">
-        <span class="hud-label">Score</span>
-        <span class="hud-value" id="score-display">0</span>
-      </div>
-      <div class="hud-divider"></div>
-      <div class="hud-item">
-        <span class="hud-label">Streak 🔥</span>
-        <span class="hud-value" id="streak-display">0</span>
-      </div>
-      <div class="hud-divider"></div>
-      <div class="hud-item">
-        <span class="hud-label">Question</span>
-        <span class="hud-value" id="question-display">1/10</span>
-      </div>
-      <div class="hud-divider"></div>
-      <div class="hud-item">
-        <span class="hud-label">Best</span>
-        <span class="hud-value" id="best-display" style="color: var(--gold);">0</span>
-      </div>
-    </div>
-
-    <div class="progress-bar">
-      <div class="progress-fill" id="progress-fill" style="width:0%"></div>
-    </div>
-
-    <div class="flag-card" id="flag-card">
-      <span class="flag-emoji" id="flag-emoji">🏴</span>
-      <div class="flag-question">Which country does this flag belong to?</div>
-    </div>
-
+  <section class="screen" id="game">
+    <div class="hud"><b class="glass">Score<em id="score">0</em></b><b class="glass">Streak<em id="streak">0</em></b><b class="glass" id="qnum">1 / 10</b><button class="glass quit" id="quit">Quit</button></div>
+    <div class="prog"><i id="prog"></i></div>
+    <div class="q">Which country flies this flag?</div>
+    <div class="flag-stage"><div class="wave" id="flag" role="img" aria-label="Mystery flag"></div></div>
     <div class="choices" id="choices"></div>
+    <div class="after"><div class="fb" id="fb" aria-live="polite"></div><button class="btn" id="next">Next flag →</button></div>
+  </section>
 
-    <div class="feedback" id="feedback"></div>
+  <section class="screen" id="results">
+    <p class="sub" style="margin:0" id="r-level">Easy</p>
+    <div class="big" id="r-score">0</div>
+    <div id="r-title" style="font:700 22px 'Bricolage Grotesque',sans-serif"></div>
+    <div class="stats"><div class="glass"><b id="r-correct">0/10</b><small>Correct</small></div><div class="glass"><b id="r-streak">0</b><small>Best streak</small></div><div class="glass"><b id="r-new">0</b><small>New countries</small></div></div>
+    <div class="legend"><span><i style="background:var(--gold)"></i>Named it</span><span><i style="background:var(--bad)"></i>Missed</span><span><i style="background:#e8dcae"></i>Found before</span></div>
+    <div class="actions"><button class="btn" id="again">Play again</button><button class="btn ghost" id="to-menu">Change level</button></div>
+  </section>
+</main>
 
-    <button class="next-btn" id="next-btn" onclick="nextQuestion()">Next Flag →</button>
-  </div>
-
-  <!-- RESULTS -->
-  <div id="results-screen" class="screen">
-    <div class="result-trophy" id="result-trophy">🏆</div>
-    <div class="result-title" id="result-title">QUIZ COMPLETE</div>
-    <div class="result-subtitle" id="result-subtitle">Here's how you did</div>
-
-    <div class="result-stats">
-      <div class="stat-box">
-        <div class="stat-num" id="r-score">0</div>
-        <div class="stat-lbl">Final Score</div>
-      </div>
-      <div class="stat-box">
-        <div class="stat-num" id="r-correct">0/10</div>
-        <div class="stat-lbl">Correct</div>
-      </div>
-      <div class="stat-box">
-        <div class="stat-num" id="r-streak">0</div>
-        <div class="stat-lbl">Best Streak</div>
-      </div>
-    </div>
-
-    <div class="result-grade" id="result-grade">⭐</div>
-    <div class="result-msg" id="result-msg"></div>
-
-    <div class="btn-row">
-      <button class="btn-primary" id="play-again-btn" onclick="playAgain()">Play Again</button>
-      <button class="btn-secondary" onclick="goMenu()">Change Difficulty</button>
-    </div>
-  </div>
-
-</div>
-
+<script src="vendor/d3.min.js"></script>
+<script src="vendor/topojson-client.min.js"></script>
+<script src="js/countries.js"></script>
 <script>
-// ── DATA ──────────────────────────────────────────────────────────────
-const countries = {
-  easy: [
-    { name: "United States", flag: "🇺🇸" },
-    { name: "Canada", flag: "🇨🇦" },
-    { name: "Mexico", flag: "🇲🇽" },
-    { name: "United Kingdom", flag: "🇬🇧" },
-    { name: "France", flag: "🇫🇷" },
-    { name: "Germany", flag: "🇩🇪" },
-    { name: "Italy", flag: "🇮🇹" },
-    { name: "Spain", flag: "🇪🇸" },
-    { name: "Japan", flag: "🇯🇵" },
-    { name: "China", flag: "🇨🇳" },
-    { name: "Australia", flag: "🇦🇺" },
-    { name: "Brazil", flag: "🇧🇷" },
-    { name: "Russia", flag: "🇷🇺" },
-    { name: "India", flag: "🇮🇳" },
-    { name: "South Korea", flag: "🇰🇷" },
-    { name: "South Africa", flag: "🇿🇦" },
-    { name: "Argentina", flag: "🇦🇷" },
-    { name: "Turkey", flag: "🇹🇷" },
-    { name: "Greece", flag: "🇬🇷" },
-    { name: "Norway", flag: "🇳🇴" },
-    { name: "Sweden", flag: "🇸🇪" },
-    { name: "Switzerland", flag: "🇨🇭" },
-    { name: "Egypt", flag: "🇪🇬" },
-    { name: "Saudi Arabia", flag: "🇸🇦" },
-    { name: "Israel", flag: "🇮🇱" },
-    { name: "Nigeria", flag: "🇳🇬" },
-    { name: "Portugal", flag: "🇵🇹" },
-    { name: "Netherlands", flag: "🇳🇱" },
-    { name: "New Zealand", flag: "🇳🇿" },
-    { name: "Cuba", flag: "🇨🇺" },
-  ],
-  medium: [
-    { name: "Poland", flag: "🇵🇱" },
-    { name: "Ukraine", flag: "🇺🇦" },
-    { name: "Belgium", flag: "🇧🇪" },
-    { name: "Austria", flag: "🇦🇹" },
-    { name: "Denmark", flag: "🇩🇰" },
-    { name: "Finland", flag: "🇫🇮" },
-    { name: "Czech Republic", flag: "🇨🇿" },
-    { name: "Romania", flag: "🇷🇴" },
-    { name: "Hungary", flag: "🇭🇺" },
-    { name: "Croatia", flag: "🇭🇷" },
-    { name: "Serbia", flag: "🇷🇸" },
-    { name: "Pakistan", flag: "🇵🇰" },
-    { name: "Bangladesh", flag: "🇧🇩" },
-    { name: "Thailand", flag: "🇹🇭" },
-    { name: "Indonesia", flag: "🇮🇩" },
-    { name: "Malaysia", flag: "🇲🇾" },
-    { name: "Philippines", flag: "🇵🇭" },
-    { name: "Vietnam", flag: "🇻🇳" },
-    { name: "Iran", flag: "🇮🇷" },
-    { name: "Iraq", flag: "🇮🇶" },
-    { name: "Morocco", flag: "🇲🇦" },
-    { name: "Algeria", flag: "🇩🇿" },
-    { name: "Kenya", flag: "🇰🇪" },
-    { name: "Ethiopia", flag: "🇪🇹" },
-    { name: "Ghana", flag: "🇬🇭" },
-    { name: "Colombia", flag: "🇨🇴" },
-    { name: "Chile", flag: "🇨🇱" },
-    { name: "Peru", flag: "🇵🇪" },
-    { name: "Venezuela", flag: "🇻🇪" },
-    { name: "Ireland", flag: "🇮🇪" },
-  ],
-  hard: [
-    { name: "Luxembourg", flag: "🇱🇺" },
-    { name: "Iceland", flag: "🇮🇸" },
-    { name: "Lithuania", flag: "🇱🇹" },
-    { name: "Latvia", flag: "🇱🇻" },
-    { name: "Estonia", flag: "🇪🇪" },
-    { name: "Slovenia", flag: "🇸🇮" },
-    { name: "Slovakia", flag: "🇸🇰" },
-    { name: "Bulgaria", flag: "🇧🇬" },
-    { name: "Moldova", flag: "🇲🇩" },
-    { name: "Belarus", flag: "🇧🇾" },
-    { name: "Georgia", flag: "🇬🇪" },
-    { name: "Armenia", flag: "🇦🇲" },
-    { name: "Azerbaijan", flag: "🇦🇿" },
-    { name: "Kazakhstan", flag: "🇰🇿" },
-    { name: "Uzbekistan", flag: "🇺🇿" },
-    { name: "Kyrgyzstan", flag: "🇰🇬" },
-    { name: "Tajikistan", flag: "🇹🇯" },
-    { name: "Turkmenistan", flag: "🇹🇲" },
-    { name: "Mongolia", flag: "🇲🇳" },
-    { name: "Nepal", flag: "🇳🇵" },
-    { name: "Sri Lanka", flag: "🇱🇰" },
-    { name: "Myanmar", flag: "🇲🇲" },
-    { name: "Cambodia", flag: "🇰🇭" },
-    { name: "Laos", flag: "🇱🇦" },
-    { name: "Bhutan", flag: "🇧🇹" },
-    { name: "Maldives", flag: "🇲🇻" },
-    { name: "Singapore", flag: "🇸🇬" },
-    { name: "Brunei", flag: "🇧🇳" },
-    { name: "East Timor", flag: "🇹🇱" },
-    { name: "Papua New Guinea", flag: "🇵🇬" },
-    { name: "Fiji", flag: "🇫🇯" },
-    { name: "Vanuatu", flag: "🇻🇺" },
-    { name: "Samoa", flag: "🇼🇸" },
-    { name: "Tonga", flag: "🇹🇴" },
-    { name: "Kiribati", flag: "🇰🇮" },
-    { name: "Jordan", flag: "🇯🇴" },
-    { name: "Lebanon", flag: "🇱🇧" },
-    { name: "Syria", flag: "🇸🇾" },
-    { name: "Yemen", flag: "🇾🇪" },
-    { name: "Oman", flag: "🇴🇲" },
-    { name: "Kuwait", flag: "🇰🇼" },
-    { name: "Qatar", flag: "🇶🇦" },
-    { name: "Bahrain", flag: "🇧🇭" },
-    { name: "UAE", flag: "🇦🇪" },
-    { name: "Libya", flag: "🇱🇾" },
-    { name: "Tunisia", flag: "🇹🇳" },
-    { name: "Sudan", flag: "🇸🇩" },
-    { name: "Tanzania", flag: "🇹🇿" },
-    { name: "Uganda", flag: "🇺🇬" },
-    { name: "Zimbabwe", flag: "🇿🇼" },
-    { name: "Zambia", flag: "🇿🇲" },
-    { name: "Mozambique", flag: "🇲🇿" },
-    { name: "Madagascar", flag: "🇲🇬" },
-    { name: "Cameroon", flag: "🇨🇲" },
-    { name: "Senegal", flag: "🇸🇳" },
-    { name: "Ivory Coast", flag: "🇨🇮" },
-    { name: "Uruguay", flag: "🇺🇾" },
-    { name: "Paraguay", flag: "🇵🇾" },
-    { name: "Bolivia", flag: "🇧🇴" },
-    { name: "Ecuador", flag: "🇪🇨" },
-    { name: "Panama", flag: "🇵🇦" },
-    { name: "Costa Rica", flag: "🇨🇷" },
-    { name: "Guatemala", flag: "🇬🇹" },
-    { name: "Honduras", flag: "🇭🇳" },
-    { name: "El Salvador", flag: "🇸🇻" },
-    { name: "Nicaragua", flag: "🇳🇮" },
-    { name: "Jamaica", flag: "🇯🇲" },
-    { name: "Haiti", flag: "🇭🇹" },
-    { name: "Dominican Republic", flag: "🇩🇴" },
-    { name: "Trinidad & Tobago", flag: "🇹🇹" },
-    { name: "Barbados", flag: "🇧🇧" },
-    { name: "Malta", flag: "🇲🇹" },
-    { name: "Cyprus", flag: "🇨🇾" },
-    { name: "Albania", flag: "🇦🇱" },
-    { name: "North Macedonia", flag: "🇲🇰" },
-    { name: "Bosnia", flag: "🇧🇦" },
-    { name: "Montenegro", flag: "🇲🇪" },
-    { name: "Kosovo", flag: "🇽🇰" },
-  ]
-};
+(() => {
+  'use strict';
+  const QUESTIONS = 10, POINTS = 100, STREAK_BONUS = 25;
+  const $ = (id) => document.getElementById(id);
+  const shuffle = (a) => { a = [...a]; for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+  const flagUrl = (c) => `flags/${c.code}.svg`;
+  const byLevel = { easy: COUNTRIES.filter((c) => c.level === 'easy'), medium: COUNTRIES.filter((c) => c.level === 'medium'), hard: COUNTRIES.filter((c) => c.level === 'hard') };
+  const poolFor = (lvl) => lvl === 'easy' ? byLevel.easy : lvl === 'medium' ? [...byLevel.easy, ...byLevel.medium] : COUNTRIES;
 
-// ── STATE ──────────────────────────────────────────────────────────────
-const QUESTIONS_PER_GAME = 10;
-const CHOICES_COUNT = 4;
-const POINTS_BASE = 100;
-const POINTS_STREAK_BONUS = 25;
+  // ---------------------------------------------------------------- saved progress (this browser only)
+  const store = {
+    get(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch { return d; } },
+    set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
+  };
+  const best = store.get('fq.best', { easy: 0, medium: 0, hard: 0 });
+  const found = new Set(store.get('fq.found', []));
 
-let state = {
-  difficulty: 'easy',
+  // ---------------------------------------------------------------- the globe
+  const canvas = $('globe'), ctx = canvas.getContext('2d');
+  const proj = d3.geoOrthographic().clipAngle(90).precision(0.4);
+  const path = d3.geoPath(proj, ctx);
+  const grat = d3.geoGraticule10();
+  const globe = { ready: false, rot: [20, -15, 0], zoom: 1, spin: true, colors: new Map(), pin: null, land: null, borders: null, shapes: new Map(), size: 0 };
+  let dirty = true;
 
-  allPool: [],
-  queue: [],
-  current: null,
-  questionIndex: 0,
-  score: 0,
-  streak: 0,
-  bestStreak: 0,
-  correct: 0,
-  answered: false,
-  bestScore: { easy: 0, medium: 0, hard: 0 },
-};
-
-// ── HELPERS ────────────────────────────────────────────────────────────
-function shuffle(arr) {
-  const a = [...arr];
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
+  function resize() {
+    const r = canvas.getBoundingClientRect(), dpr = Math.min(2, window.devicePixelRatio || 1);
+    canvas.width = Math.round(r.width * dpr); canvas.height = Math.round(r.height * dpr);
+    globe.size = r.width; globe.dpr = dpr; dirty = true;
   }
-  return a;
-}
 
-function showScreen(id) {
-  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-  document.getElementById(id).classList.add('active');
-}
-
-// ── GAME LOGIC ──────────────────────────────────────────────────────────
-function buildPool(difficulty) {
-  if (difficulty === 'easy') return [...countries.easy];
-  if (difficulty === 'medium') return [...countries.easy, ...countries.medium];
-  return [...countries.easy, ...countries.medium, ...countries.hard];
-}
-
-function buildQueue(difficulty) {
-  if (difficulty === 'easy') {
-    return shuffle(countries.easy).slice(0, QUESTIONS_PER_GAME);
-  }
-  if (difficulty === 'medium') {
-    const easyPick = shuffle([...countries.easy]).slice(0, 3);
-    const mediumPick = shuffle([...countries.medium]).slice(0, 4);
-    const usedNames = new Set([...easyPick, ...mediumPick].map(c => c.name));
-    const remaining = shuffle([...countries.easy, ...countries.medium]
-      .filter(c => !usedNames.has(c.name)))
-      .slice(0, QUESTIONS_PER_GAME - 7);
-    return shuffle([...easyPick, ...mediumPick, ...remaining]);
-  }
-  const easyPick = shuffle([...countries.easy]).slice(0, 2);
-  const mediumPick = shuffle([...countries.medium]).slice(0, 2);
-  const hardPick = shuffle([...countries.hard]).slice(0, 4);
-  const usedNames = new Set([...easyPick, ...mediumPick, ...hardPick].map(c => c.name));
-  const remaining = shuffle([...countries.easy, ...countries.medium, ...countries.hard]
-    .filter(c => !usedNames.has(c.name)))
-    .slice(0, QUESTIONS_PER_GAME - 8);
-  return shuffle([...easyPick, ...mediumPick, ...hardPick, ...remaining]);
-}
-
-function startGame(difficulty) {
-  state.difficulty = difficulty;
-  state.allPool = buildPool(difficulty);
-  state.queue = buildQueue(difficulty);
-  state.questionIndex = 0;
-  state.score = 0;
-  state.streak = 0;
-  state.bestStreak = 0;
-  state.correct = 0;
-  state.answered = false;
-
-  showScreen('game-screen');
-  updateHUD();
-  loadQuestion();
-}
-
-function loadQuestion() {
-  state.answered = false;
-  state.current = state.queue[state.questionIndex];
-
-  // Progress
-  const pct = (state.questionIndex / QUESTIONS_PER_GAME) * 100;
-  document.getElementById('progress-fill').style.width = pct + '%';
-
-  // Flag
-  const flagEl = document.getElementById('flag-emoji');
-  flagEl.textContent = state.current.flag;
-  flagEl.classList.remove('pop');
-  void flagEl.offsetWidth;
-  flagEl.classList.add('pop');
-
-  // Reset card state
-  const card = document.getElementById('flag-card');
-  card.classList.remove('correct', 'wrong');
-
-  // Clear feedback
-  const fb = document.getElementById('feedback');
-  fb.textContent = '';
-  fb.className = 'feedback';
-
-  // Hide next
-  document.getElementById('next-btn').classList.remove('visible');
-
-  // Build choices
-  const wrong = shuffle(state.allPool.filter(c => c.name !== state.current.name))
-    .slice(0, CHOICES_COUNT - 1);
-  const choices = shuffle([state.current, ...wrong]);
-
-  const container = document.getElementById('choices');
-  container.innerHTML = '';
-  choices.forEach(c => {
-    const btn = document.createElement('button');
-    btn.className = 'choice-btn';
-    btn.textContent = c.name;
-    btn.onclick = () => handleAnswer(btn, c.name);
-    container.appendChild(btn);
-  });
-
-  updateHUD();
-}
-
-function handleAnswer(btn, chosen) {
-  if (state.answered) return;
-  state.answered = true;
-
-  const correct = chosen === state.current.name;
-  const card = document.getElementById('flag-card');
-  const fb = document.getElementById('feedback');
-
-  // Disable all buttons & mark
-  document.querySelectorAll('.choice-btn').forEach(b => {
-    b.disabled = true;
-    if (b.textContent === state.current.name) b.classList.add('correct-ans');
-  });
-
-  if (correct) {
-    state.streak++;
-    state.correct++;
-    if (state.streak > state.bestStreak) state.bestStreak = state.streak;
-    const bonus = Math.max(0, state.streak - 1) * POINTS_STREAK_BONUS;
-    const earned = POINTS_BASE + bonus;
-    state.score += earned;
-
-    card.classList.add('correct');
-    btn.classList.add('correct-ans');
-    fb.className = 'feedback correct-fb';
-    const streakMsg = state.streak >= 3 ? ` 🔥 ${state.streak} streak! (+${bonus} bonus)` : '';
-    fb.textContent = `✓ Correct! +${earned} points${streakMsg}`;
-
-    // flash streak
-    if (state.streak >= 2) {
-      const sd = document.getElementById('streak-display');
-      sd.classList.remove('streak-flash');
-      void sd.offsetWidth;
-      sd.classList.add('streak-flash');
+  function draw(t) {
+    const W = canvas.width, dpr = globe.dpr, R = W / 2 * 0.9 * globe.zoom, cx = W / 2, cy = W / 2;
+    proj.scale(R).translate([cx, cy]).rotate(globe.rot);
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, W, W);
+    // atmosphere
+    const G = Math.min(R, W / 2 * 0.97);
+    const glow = ctx.createRadialGradient(cx, cy, G * 0.92, cx, cy, G * 1.12);
+    glow.addColorStop(0, 'rgba(110,168,255,.45)'); glow.addColorStop(1, 'rgba(110,168,255,0)');
+    ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(cx, cy, Math.min(G * 1.12, W / 2), 0, Math.PI * 2); ctx.fill();
+    // ocean
+    const sea = ctx.createRadialGradient(cx - R * .35, cy - R * .4, R * .1, cx, cy, R);
+    sea.addColorStop(0, '#3f86e0'); sea.addColorStop(1, '#0d2a6b');
+    // Zoomed in, the globe is seen through a round lens the size of the canvas.
+    const lens = Math.min(R, W / 2 * 0.97);
+    ctx.save();
+    ctx.beginPath(); ctx.arc(cx, cy, lens, 0, Math.PI * 2); ctx.clip();
+    ctx.fillStyle = sea; ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2); ctx.fill();
+    if (!globe.ready) { ctx.restore(); return; }
+    ctx.beginPath(); path(grat); ctx.strokeStyle = 'rgba(255,255,255,.1)'; ctx.lineWidth = dpr; ctx.stroke();
+    ctx.beginPath(); path(globe.land); ctx.fillStyle = '#2f9e6f'; ctx.fill();
+    for (const code of found) { const f = globe.shapes.get(code); if (f && !globe.colors.has(code)) { ctx.beginPath(); path(f); ctx.fillStyle = '#e8dcae'; ctx.fill(); } }
+    for (const [code, color] of globe.colors) { const f = globe.shapes.get(code); if (f) { ctx.beginPath(); path(f); ctx.fillStyle = color; ctx.fill(); } }
+    ctx.beginPath(); path(globe.borders); ctx.strokeStyle = 'rgba(11,16,51,.75)'; ctx.lineWidth = 0.6 * dpr; ctx.stroke();
+    if (globe.pin) {
+      const f = globe.shapes.get(globe.pin.code);
+      if (f) { ctx.beginPath(); path(f); ctx.strokeStyle = '#fff'; ctx.lineWidth = 2 * dpr; ctx.stroke(); }
+      const p = [globe.pin.lon, globe.pin.lat];
+      if (d3.geoDistance(p, [-globe.rot[0], -globe.rot[1]]) < Math.PI / 2 - 0.05) {
+        const [x, y] = proj(p), pulse = (t / 900) % 1;
+        ctx.beginPath(); ctx.arc(x, y, (8 + pulse * 22) * dpr, 0, Math.PI * 2); ctx.strokeStyle = `rgba(255,207,63,${1 - pulse})`; ctx.lineWidth = 3 * dpr; ctx.stroke();
+        ctx.beginPath(); ctx.arc(x, y, 5 * dpr, 0, Math.PI * 2); ctx.fillStyle = '#ffcf3f'; ctx.fill(); ctx.strokeStyle = '#fff'; ctx.lineWidth = 2 * dpr; ctx.stroke();
+        globe.pinScreen = [x / dpr, y / dpr];
+      } else globe.pinScreen = null;
     }
-  } else {
-    state.streak = 0;
-    card.classList.add('wrong');
-    btn.classList.add('wrong-ans');
-    fb.className = 'feedback wrong-fb';
-    fb.textContent = `✗ That's ${state.current.name}`;
-    btn.classList.add('shake');
+    ctx.restore();
+    if (R > lens) { ctx.beginPath(); ctx.arc(cx, cy, lens, 0, Math.PI * 2); ctx.strokeStyle = 'rgba(160,200,255,.55)'; ctx.lineWidth = 3 * dpr; ctx.stroke(); }
   }
 
-  updateHUD();
-  document.getElementById('next-btn').classList.add('visible');
-  document.getElementById('next-btn').textContent =
-    state.questionIndex < QUESTIONS_PER_GAME - 1 ? 'Next Flag →' : 'See Results →';
-}
-
-function nextQuestion() {
-  state.questionIndex++;
-  if (state.questionIndex >= QUESTIONS_PER_GAME) {
-    showResults();
-  } else {
-    loadQuestion();
-  }
-}
-
-function updateHUD() {
-  document.getElementById('score-display').textContent = state.score;
-  document.getElementById('streak-display').textContent = state.streak;
-  document.getElementById('question-display').textContent =
-    `${state.questionIndex + 1}/${QUESTIONS_PER_GAME}`;
-  const best = state.bestScore[state.difficulty];
-  document.getElementById('best-display').textContent = best;
-}
-
-function showResults() {
-  // Update best
-  if (state.score > state.bestScore[state.difficulty]) {
-    state.bestScore[state.difficulty] = state.score;
+  let tween = null;
+  function flyTo(lon, lat, zoom, ms = 1600) {
+    const from = { rot: [...globe.rot], zoom: globe.zoom };
+    // Take the short way round.
+    let dl = (-lon - from.rot[0]) % 360; if (dl > 180) dl -= 360; if (dl < -180) dl += 360;
+    const to = { rot: [from.rot[0] + dl, -lat, 0], zoom };
+    const start = performance.now();
+    globe.spin = false;
+    return new Promise((resolve) => { tween = { from, to, start, ms, resolve }; });
   }
 
-  const pct = state.correct / QUESTIONS_PER_GAME;
-  let trophy, title, msg, grade;
+  let last = performance.now();
+  function frame(t) {
+    const dt = Math.min(50, t - last); last = t;
+    if (tween) {
+      const k = Math.min(1, (t - tween.start) / tween.ms), e = d3.easeCubicInOut(k);
+      globe.rot = tween.from.rot.map((v, i) => v + (tween.to.rot[i] - v) * e);
+      // Pull out a little mid-flight, then settle in.
+      const arc = Math.sin(Math.PI * k) * 0.18 * Math.max(globe.zoom, 1);
+      globe.zoom = tween.from.zoom + (tween.to.zoom - tween.from.zoom) * e - arc * (tween.to.zoom > 1.2 ? 1 : 0);
+      if (k === 1) { globe.zoom = tween.to.zoom; const r = tween.resolve; tween = null; r(); }
+      dirty = true;
+    } else if (globe.spin && !dragging) { globe.rot[0] += dt * 0.006; dirty = true; }
+    if (globe.pin) dirty = true;
+    if (dirty) { draw(t); dirty = false; placeTag(); }
+    requestAnimationFrame(frame);
+  }
 
-  if (pct === 1) { trophy = '🏆'; title = 'PERFECT SCORE!'; grade = '🌟🌟🌟'; msg = 'You\'re a world-class geographer!'; }
-  else if (pct >= 0.8) { trophy = '🥇'; title = 'EXCELLENT!'; grade = '🌟🌟'; msg = 'Impressive flag knowledge!'; }
-  else if (pct >= 0.6) { trophy = '🥈'; title = 'WELL DONE'; grade = '🌟'; msg = 'Solid performance. Try again to beat your score!'; }
-  else if (pct >= 0.4) { trophy = '🥉'; title = 'NOT BAD'; grade = '📍'; msg = 'You\'re getting there. Keep studying those flags!'; }
-  else { trophy = '🗺️'; title = 'KEEP PRACTICING'; grade = '📚'; msg = 'Time to open that atlas! You\'ll improve with practice.'; }
+  // Drag to spin.
+  let dragging = null;
+  canvas.addEventListener('pointerdown', (e) => { if (tween) return; dragging = { x: e.clientX, y: e.clientY, rot: [...globe.rot] }; canvas.setPointerCapture(e.pointerId); });
+  canvas.addEventListener('pointermove', (e) => {
+    if (!dragging) return;
+    const k = 120 / (globe.size * globe.zoom);
+    globe.rot = [dragging.rot[0] + (e.clientX - dragging.x) * k, Math.max(-80, Math.min(80, dragging.rot[1] - (e.clientY - dragging.y) * k)), 0];
+    dirty = true;
+  });
+  canvas.addEventListener('pointerup', () => { dragging = null; });
+  canvas.addEventListener('pointercancel', () => { dragging = null; });
 
-  document.getElementById('result-trophy').textContent = trophy;
-  document.getElementById('result-title').textContent = title;
-  document.getElementById('result-subtitle').textContent =
-    `${state.difficulty.charAt(0).toUpperCase() + state.difficulty.slice(1)} difficulty`;
-  document.getElementById('r-score').textContent = state.score;
-  document.getElementById('r-correct').textContent = `${state.correct}/${QUESTIONS_PER_GAME}`;
-  document.getElementById('r-streak').textContent = state.bestStreak;
-  document.getElementById('result-grade').textContent = grade;
-  document.getElementById('result-msg').textContent = msg;
+  // The white label that points at the country.
+  const tag = $('tag');
+  function placeTag() {
+    if (!tag.classList.contains('show')) return;
+    const r = canvas.getBoundingClientRect(), p = globe.pinScreen;
+    if (!p) { tag.classList.remove('show'); return; }
+    tag.style.left = `${Math.max(90, Math.min(innerWidth - 90, r.left + p[0]))}px`;
+    tag.style.top = `${Math.max(70, r.top + p[1])}px`;
+  }
+  function showTag(c) {
+    tag.querySelector('b').textContent = c.name;
+    tag.querySelector('small').textContent = `${c.continent} · capital ${c.capital}`;
+    tag.classList.add('show'); placeTag();
+  }
+  const hideTag = () => tag.classList.remove('show');
 
-  document.getElementById('play-again-btn').textContent =
-    `Play Again (${state.difficulty.charAt(0).toUpperCase() + state.difficulty.slice(1)})`;
+  // Zoom so small countries are big enough to see.
+  function zoomFor(c) {
+    const f = globe.shapes.get(c.code);
+    if (!f) return 2.6;
+    const frac = d3.geoArea(f) / (4 * Math.PI);
+    return Math.max(1, Math.min(2.6, 0.08 / Math.sqrt(frac)));
+  }
 
-  showScreen('results-screen');
-}
+  async function loadGlobe() {
+    const world = await (await fetch('data/countries-50m.json')).json();
+    const feats = topojson.feature(world, world.objects.countries).features;
+    const byId = new Map(feats.map((f) => [f.id ?? f.properties.name, f]));
+    const byName = new Map(feats.map((f) => [f.properties.name, f]));
+    for (const c of COUNTRIES) { const f = byId.get(c.shape) ?? byName.get(c.shape); if (f) globe.shapes.set(c.code, f); }
+    globe.land = topojson.feature(world, world.objects.land);
+    globe.borders = topojson.mesh(world, world.objects.countries, (a, b) => a !== b);
+    globe.ready = true; dirty = true;
+    $('loading').remove();
+  }
 
-function playAgain() {
-  startGame(state.difficulty);
-}
+  // ---------------------------------------------------------------- waving flag
+  function setFlag(c) {
+    const el = $('flag'), n = 28, url = flagUrl(c);
+    el.replaceChildren(...Array.from({ length: n }, (_, i) => {
+      const s = document.createElement('i');
+      // Soft folds of light and shadow, laid across the whole flag so the strips line up.
+      s.style.backgroundImage = `linear-gradient(90deg, rgba(0,0,0,.16), rgba(255,255,255,.16) 22%, rgba(0,0,0,.14) 48%, rgba(255,255,255,.14) 74%, rgba(0,0,0,.16)), url(${url})`;
+      s.style.backgroundSize = `${n * 100}% 100%`;
+      s.style.backgroundPosition = `${(i / (n - 1)) * 100}% 0`;
+      s.style.animationDelay = `${-i * 0.085}s`;
+      return s;
+    }));
+    el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop');
+  }
 
-function goMenu() {
-  showScreen('menu-screen');
-}
+  // ---------------------------------------------------------------- game
+  const game = { level: 'easy', queue: [], i: 0, score: 0, streak: 0, bestStreak: 0, right: 0, answered: false, results: [], newFound: 0 };
+
+  function buildQueue(level) {
+    const take = (arr, n) => shuffle(arr).slice(0, n);
+    if (level === 'easy') return take(byLevel.easy, QUESTIONS);
+    const mix = level === 'medium' ? [...take(byLevel.easy, 3), ...take(byLevel.medium, 7)] : [...take(byLevel.easy, 2), ...take(byLevel.medium, 3), ...take(byLevel.hard, 5)];
+    return shuffle(mix);
+  }
+
+  // Wrong answers: on Medium and Hard, neighbors from the same continent make it a real test.
+  function choicesFor(c) {
+    const pool = poolFor(game.level).filter((o) => o.code !== c.code);
+    const near = game.level === 'easy' ? [] : shuffle(pool.filter((o) => o.continent === c.continent)).slice(0, 2);
+    const rest = shuffle(pool.filter((o) => !near.includes(o))).slice(0, 3 - near.length);
+    return shuffle([c, ...near, ...rest]);
+  }
+
+  function show(id) { document.querySelectorAll('.screen').forEach((s) => s.classList.toggle('on', s.id === id)); }
+
+  function renderMenu() {
+    for (const el of document.querySelectorAll('[data-best]')) el.textContent = best[el.dataset.best] || 0;
+    $('found-count').textContent = `${found.size} / ${COUNTRIES.length}`;
+    $('found-bar').style.width = `${(found.size / COUNTRIES.length) * 100}%`;
+  }
+
+  function goMenu() {
+    hideTag(); globe.pin = null; globe.colors.clear();
+    flyTo(-globe.rot[0], -globe.rot[1], 1, 700).then(() => { globe.spin = true; });
+    renderMenu(); show('menu');
+  }
+
+  function start(level) {
+    Object.assign(game, { level, queue: buildQueue(level), i: 0, score: 0, streak: 0, bestStreak: 0, right: 0, results: [], newFound: 0 });
+    globe.colors.clear();
+    // Preload this round's flags so each one appears instantly.
+    for (const c of game.queue) { const img = new Image(); img.src = flagUrl(c); }
+    show('game'); ask();
+  }
+
+  function ask() {
+    const c = game.queue[game.i];
+    game.answered = false;
+    hideTag(); globe.pin = null; globe.colors.clear();
+    // Drift away so the globe never gives the answer away.
+    flyTo(-globe.rot[0] + 40 + Math.random() * 60, 10 + Math.random() * 20, 1, 900).then(() => { if (!game.answered) globe.spin = true; });
+    setFlag(c);
+    $('qnum').textContent = `${game.i + 1} / ${QUESTIONS}`;
+    $('prog').style.width = `${(game.i / QUESTIONS) * 100}%`;
+    $('score').textContent = game.score; $('streak').textContent = game.streak;
+    $('fb').textContent = ''; $('fb').className = 'fb';
+    $('next').classList.remove('show');
+    $('choices').replaceChildren(...choicesFor(c).map((o, k) => {
+      const b = document.createElement('button');
+      b.className = 'choice glass'; b.textContent = o.name; b.dataset.key = k + 1; b.dataset.code = o.code;
+      b.onclick = () => answer(o, b);
+      return b;
+    }));
+  }
+
+  async function answer(o, btn) {
+    if (game.answered) return;
+    game.answered = true;
+    const c = game.queue[game.i], ok = o.code === c.code;
+    for (const b of document.querySelectorAll('.choice')) {
+      b.disabled = true;
+      if (b.dataset.code === c.code) b.classList.add('right'); else if (b !== btn) b.classList.add('dim');
+    }
+    if (ok) {
+      game.streak++; game.right++; game.bestStreak = Math.max(game.bestStreak, game.streak);
+      const bonus = Math.max(0, game.streak - 1) * STREAK_BONUS;
+      game.score += POINTS + bonus;
+      if (!found.has(c.code)) { found.add(c.code); game.newFound++; store.set('fq.found', [...found]); }
+      $('fb').className = 'fb good';
+      $('fb').textContent = game.streak >= 3 ? `Correct! +${POINTS + bonus} · 🔥 ${game.streak} in a row` : `Correct! +${POINTS + bonus}`;
+    } else {
+      game.streak = 0;
+      btn.classList.add('wrong');
+      $('fb').className = 'fb bad';
+      $('fb').textContent = `That one is ${c.name}.`;
+    }
+    game.results.push({ code: c.code, ok });
+    $('score').textContent = game.score; $('streak').textContent = game.streak;
+    $('next').textContent = game.i < QUESTIONS - 1 ? 'Next flag →' : 'See results →';
+    $('next').classList.add('show');
+    globe.colors.set(c.code, ok ? '#ffcf3f' : '#f87171');
+    globe.pin = c;
+    await flyTo(c.lon, c.lat, zoomFor(c));
+    if (game.queue[game.i] === c && game.answered) showTag(c);
+  }
+
+  function next() {
+    if (!game.answered) return;
+    game.i++;
+    if (game.i >= QUESTIONS) finish(); else ask();
+  }
+
+  function finish() {
+    hideTag(); globe.pin = null; globe.colors.clear();
+    for (const r of game.results) globe.colors.set(r.code, r.ok ? '#ffcf3f' : '#f87171');
+    const isBest = game.score > (best[game.level] || 0);
+    if (isBest) { best[game.level] = game.score; store.set('fq.best', best); }
+    const pct = game.right / QUESTIONS;
+    const title = pct === 1 ? 'Perfect! World-class geographer.' : pct >= .8 ? 'Excellent flag knowledge!' : pct >= .6 ? 'Solid. Play again to beat it.' : pct >= .4 ? 'Getting there. Keep going!' : 'Keep practicing; you\'ll get them.';
+    $('r-level').innerHTML = `${game.level[0].toUpperCase() + game.level.slice(1)} level${isBest ? '<span class="newbest">New best!</span>' : ''}`;
+    $('r-score').textContent = game.score;
+    $('r-title').textContent = title;
+    $('r-correct').textContent = `${game.right}/${QUESTIONS}`;
+    $('r-streak').textContent = game.bestStreak;
+    $('r-new').textContent = game.newFound;
+    show('results');
+    // Show the whole round on the globe, centered on the countries played.
+    const pts = game.results.map((r) => COUNTRIES.find((c) => c.code === r.code));
+    const lon = d3.mean(pts, (p) => p.lon), lat = d3.mean(pts, (p) => p.lat);
+    flyTo(lon, Math.max(-40, Math.min(40, lat)), 1, 1200).then(() => { globe.spin = true; });
+  }
+
+  // ---------------------------------------------------------------- wiring
+  document.querySelectorAll('.level').forEach((b) => b.addEventListener('click', () => start(b.dataset.level)));
+  $('next').addEventListener('click', next);
+  $('quit').addEventListener('click', goMenu);
+  $('again').addEventListener('click', () => start(game.level));
+  $('to-menu').addEventListener('click', goMenu);
+  document.addEventListener('keydown', (e) => {
+    if (!$('game').classList.contains('on')) return;
+    const n = Number(e.key);
+    if (n >= 1 && n <= 4 && !game.answered) document.querySelector(`.choice[data-key="${n}"]`)?.click();
+    else if ((e.key === 'Enter' || e.key === ' ') && game.answered) { e.preventDefault(); next(); }
+  });
+  addEventListener('resize', resize);
+
+  resize(); renderMenu(); requestAnimationFrame(frame);
+  loadGlobe().catch(() => { $('loading').textContent = 'The globe could not load, but the quiz still works.'; globe.ready = false; });
+})();
 </script>
 </body>
 </html>
