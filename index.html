@@ -363,6 +363,19 @@
     // Preload this round's flags so each one appears instantly.
     for (const c of game.queue) { const img = new Image(); img.src = flagUrl(c); }
     show('game'); ask();
+    if (isAndroid()) androidTax();
+  }
+
+  // Just for fun: Android players start in the hole. (?android forces it for testing.)
+  function isAndroid() {
+    return /android/i.test(navigator.userAgent) || navigator.userAgentData?.platform === 'Android' || /[?&]android\b/.test(location.search);
+  }
+
+  function androidTax() {
+    game.score = -100;
+    $('score').textContent = game.score;
+    $('fb').className = 'fb bad';
+    $('fb').textContent = '📱 Android detected! Border control just flagged your phone: you start at -100 points. The iPhone kids will never let you forget it.';
   }
 
   function ask() {
